@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Recebimento massivo — Protótipo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./tetris-ds-mobile.css">
+<style>
+  html, body {
+    width: 100%; height: 100%;
+    background: #f5f7ff;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .preview-wrap {
+    width: min(390px, 100vw);
+    height: min(844px, 100svh);
+    border-radius: 40px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(150,160,205,0.25);
+    position: relative;
+  }
+  @media (max-height: 860px) {
+    .preview-wrap { border-radius: 0; }
+    html, body { background: #f5f7ff; }
+  }
+  .home-screen, .scan-screen, .transit-screen { height: 100%; }
+  .armazenar-screen { height: 100%; }
+  .armazenar-list { overflow-y: auto; min-height: 0; padding-bottom: 24px; }
+  /* Lista consultiva (IS's): sem aspecto de toque (sem card, cursor ou feedback de clique) */
+  .is-list { gap: 0; padding-top: 0; }
+
+  .is-list .armazenar-option { cursor: default; border: none; border-bottom: 1px solid #f0f0f7; border-radius: 0; padding: 16px 0; -webkit-tap-highlight-color: transparent; }
+  .is-list .armazenar-option:last-child { border-bottom: none; }
+  .is-list .armazenar-option:active { opacity: 1; }
+  .home-card { position: relative; }
+  .home-card-notif { position: absolute; top: 16px; right: 16px; width: 14px; height: 14px; border-radius: 9999px; background: #4850e5; box-shadow: 0 0 0 3px #fff; }
+  /* Conte as caixas */
+  .boxes-header { align-items: center; justify-content: space-between; padding-bottom: 8px; }
+  .boxes-header-title { font-size: 20px; font-weight: 500; line-height: 28px; letter-spacing: -0.2px; color: #1c1c2b; }
+  .boxes-body { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 24px 16px; display: flex; flex-direction: column; justify-content: center; gap: clamp(28px, 7svh, 64px); }
+  .boxes-group { display: flex; flex-direction: column; gap: clamp(28px, 7svh, 64px); }
+  .boxes-group.is-card { gap: 8px; padding: 12px 16px; }
+  .boxes-group.is-card { border: 1px solid #dedfed; border-radius: 16px; }
+  .boxes-group-head { display: flex; align-items: center; justify-content: space-between; }
+  .boxes-group-title { font-size: 16px; font-weight: 600; color: #1c1c2b; letter-spacing: -0.16px; }
+  .boxes-field { display: flex; flex-direction: column; gap: 4px; }
+  .boxes-label { font-size: 16px; font-weight: 500; line-height: 22px; color: #5a5a7c; }
+  .boxes-screen .stepper-btn { width: 80px; height: 64px; }
+  .boxes-screen .stepper-btn.minus { background: #e0e9ff; }
+  .boxes-screen .stepper-btn.plus { background: #4850e5; }
+  .boxes-screen .stepper-btn:disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
+  .boxes-num { flex: 1; min-width: 0; width: 0; border: none; background: transparent; outline: none; font-family: inherit; font-size: 56px; font-weight: 400; line-height: 1; letter-spacing: -2px; color: #1c1c2b; text-align: center; padding: 0; }
+  .boxes-num:focus { background: #f0f0f7; border-radius: 12px; }
+  .boxes-link { background: none; border: none; font-family: inherit; font-size: 16px; font-weight: 500; line-height: 24px; cursor: pointer; padding: 8px 0; text-align: left; -webkit-tap-highlight-color: transparent; }
+  .boxes-link:active { opacity: .6; }
+  .boxes-link--primary { color: #4850e5; }
+  .boxes-link--quiet { color: #5a5a7c; }
+  .boxes-link--remove { color: #da0b38; padding: 4px 0; }
+  @media (max-height: 760px) {
+    .boxes-screen .stepper-btn { height: 52px; }
+    .boxes-num { font-size: 44px; }
+    .boxes-total { font-size: 36px; line-height: 40px; }
+    .boxes-footer { padding-top: 12px; gap: 12px; }
+  }
+  .boxes-footer { flex-shrink: 0; border-top: 1px solid #dedfed; padding: 16px 24px 24px; display: flex; flex-direction: column; gap: 16px; }
+  .boxes-total-formula { font-size: 18px; font-weight: 400; line-height: 24px; color: #5a5a7c; }
+  .boxes-total { font-size: 44px; font-weight: 600; line-height: 48px; letter-spacing: -1px; color: #1c1c2b; }
+  .boxes-footer .btn:disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
+  .attention-sheet { top: auto; padding-bottom: 0; }
+  .attention-desc { font-size: 16px; font-weight: 400; line-height: 24px; color: #5a5a7c; text-align: center; }
+  .home-menu > .home-card { flex: 0 0 auto; }
+  .home-nav-item.is-disabled { pointer-events: none; opacity: .4; }
+  .usecase-hello { padding: 64px 24px 0; display: flex; flex-direction: column; gap: 8px; }
+  .usecase-hello-title { font-size: 28px; line-height: 34px; letter-spacing: -0.56px; color: #1c1c2b; }
+  .usecase-hello-desc { font-size: 16px; line-height: 24px; letter-spacing: -0.16px; color: #1c1c2b; }
+  [data-screen="usecase"] .usecase-hello-desc, [data-screen="usecase"] .usecase-hello-desc strong { font-weight: 600 !important; }
+  [data-screen="usecase"] .usecase-title { font-weight: 400 !important; font-size: 14px; line-height: 20px; letter-spacing: 0; color: #5a5a7c; }
+  .usecase-title { padding-top: 32px; }
+  .usecase-list { flex: 0 0 auto; padding-top: 16px; }
+  /* Dica de navegação (só na tela de casos de uso): texto simples, sem aparência de botão */
+  .nav-hint { margin: auto 24px 0; padding: 16px 0 32px; border-top: 1px solid #dedfed; display: flex; flex-direction: column; gap: 4px; text-align: left; font-size: 14px; line-height: 20px; color: #8a8aab; }
+  .nav-hint-steps { padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+  .nav-hint-title { font-size: 12px; line-height: 16px; letter-spacing: 0.6px; text-transform: uppercase; color: #5a5a7c; margin-bottom: 4px; }
+  /* Primeira tela: toda a tipografia em medium (500) */
+  [data-screen="usecase"] * { font-weight: 500 !important; }
+  [data-screen="usecase"] .nav-hint-title { font-weight: 600 !important; }
+  #menu-view-list { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .menu-list-item[hidden] { display: none; }
+  .menu-list-item { justify-content: space-between; gap: 12px; }
+  .btn-stack { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+  .menu-sheet-header--is { padding-left: 12px; }
+  .menu-sheet-header--is .menu-sheet-title { flex: 1; margin-left: 4px; }
+  .menu-view-howto { display: none; flex: 1; flex-direction: column; min-height: 0; }
+  .menu-view-howto.active { display: flex; }
+  .howto-tabs { padding: 4px 24px 16px; }
+  .howto-body[hidden] { display: none; }
+  .howto-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 24px 24px; display: flex; flex-direction: column; gap: 16px; }
+  .howto-illustration { height: 200px; flex-shrink: 0; border: 1px solid #bdbfd6; border-radius: 16px; background: #fff; }
+  .howto-steps { display: flex; gap: 8px; }
+  .howto-step { flex: 1; height: 56px; border: 1px solid #bdbfd6; border-radius: 12px; background: #fff; font-family: inherit; font-size: 18px; font-weight: 500; color: #5a5a7c; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .howto-illustration { display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .howto-illustration img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .howto-step { padding: 4px; }
+  .howto-step img { width: 100%; height: 100%; object-fit: contain; border-radius: 8px; display: block; }
+  .howto-step.active { border: 2px solid #4850e5; color: #4850e5; }
+  .howto-step-title { font-size: 20px; font-weight: 600; line-height: 28px; color: #5a5a7c; margin-top: 4px; }
+  .howto-step-desc { font-size: 20px; line-height: 28px; letter-spacing: -0.2px; color: #5a5a7c; }
+  .menu-view-is { display: none; flex: 1; flex-direction: column; min-height: 0; }
+  .menu-view-is.active { display: flex; }
+  .menu-scroll { flex: 1; min-height: 0; overflow-y: auto; }
+  .sheet-is-list { flex: none; overflow: visible; padding-bottom: 8px; }
+  .is-badge--congelado { background: #d3eef7; color: #0a6a86; }
+  /* Tela "Conte as caixas": link simples para a visualização isométrica (opção 2), fora da moldura, ao lado direito */
+  /* Finalizar recebimento: aparece na segunda vez que a tela de HU é exibida, ancorado ao ícone de menu */
+  .armazenar-option.is-disabled { cursor: not-allowed; background: #f7f7fb; }
+  .armazenar-option.is-disabled:active { opacity: 1; }
+  .armazenar-option.is-disabled .armazenar-option-title { color: #9ca0bf; }
+  .armazenar-option.is-disabled .armazenar-option-chevron { opacity: .4; }
+  .is-badge--soon { background: #dedfed; color: #5a5a7c; }
+  .info-list { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 24px 16px 44px; display: flex; flex-direction: column; gap: 12px; }
+  .info-item { font-size: 16px; font-weight: 400; line-height: 24px; letter-spacing: -0.16px; color: #6f6f8f; padding-left: 4px; }
+  .scan-title-group { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+  .scan-subtitle { font-size: 20px; font-weight: 400; line-height: 28px; letter-spacing: -0.2px; color: #5a5a7c; }
+  .is-title-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .is-badge { background: #dedfed; color: #1c1c2b; font-size: 12px; font-weight: 500; line-height: 16px; padding: 2px 10px; border-radius: 9999px; white-space: nowrap; }
+  .is-badge--alto-valor { background: #fee2ea; color: #da0b38; }
+  .is-badge--caixa-master { background: #e0e9ff; color: #4850e5; }
+  .product-tab:disabled { opacity: .4; cursor: not-allowed; }
+  .armazenar-screen .armazenar-title { padding-bottom: 0; }
+  .armazenar-screen .product-tabs-wrapper { padding: 16px 24px 8px; }
+  .action-screen { height: 100%; background: #fff; display: flex; flex-direction: column; }
+  .action-screen .image-slot { background: #fff; }
+  .action-screen .text-group { margin-bottom: 48px; }
+  .action-screen .image-slot img { object-fit: contain; }
+  [data-screen][hidden] { display: none; }
+
+  /* ── Estudo de UI: aspecto suave de calculadora (sem sombras; só strokes leves do design system) ── */
+  .boxes-screen { background: #ededf7; }
+  .calc-display { flex-shrink: 0; margin: 8px 24px 0; padding: 16px 20px 18px; background: #ffffff; border: 1px solid #dedfed; border-radius: 16px; text-align: right; }
+  /* Sem scroll: espaçamentos e alturas escalam com a altura da janela (--sp / --key) */
+  .boxes-screen { --sp: clamp(8px, 2svh, 20px); --key: clamp(44px, 6.6svh, 60px); }
+  .calc-display { margin: calc(var(--sp) * 0.5) 24px 0; padding: var(--sp) 20px calc(var(--sp) * 0.8); }
+  .calc-display .boxes-total-formula { font-size: 16px; line-height: 22px; color: #8a8aab; font-variant-numeric: tabular-nums; }
+  .calc-display .boxes-total { font-size: clamp(32px, 5.6svh, 48px); line-height: 1.1; letter-spacing: -1.2px; font-variant-numeric: tabular-nums; }
+  .boxes-body.calc-keys { flex: none; overflow: visible; justify-content: flex-start; margin: var(--sp) 24px 0; padding: var(--sp) 20px; gap: var(--sp); background: #ffffff; border: 1px solid #dedfed; border-radius: 16px; }
+  .calc-keys .boxes-group { gap: var(--sp); }
+  .calc-keys .boxes-label { font-size: 14px; line-height: 20px; letter-spacing: 0.2px; color: #8a8aab; }
+  .boxes-screen .stepper-btn { width: 76px; height: var(--key); border-radius: 16px; }
+  .boxes-num { font-variant-numeric: tabular-nums; font-size: clamp(34px, 6.2svh, 52px); }
+  .calc-keys .boxes-group.is-card { border: none; background: transparent; border-radius: 0; padding: 0; gap: 4px; }
+  /* Divisores entre os blocos de contagem, para evitar toque no botão errado */
+  .calc-keys .boxes-field + .boxes-field { border-top: 1px solid #dedfed; padding-top: var(--sp); }
+  .calc-keys .boxes-group + .boxes-group.is-card { border-top: 1px solid #dedfed; padding-top: var(--sp); }
+  .calc-keys .boxes-group + .boxes-link { border-top: 1px solid #dedfed; padding: var(--sp) 0 0; border-radius: 0; width: 100%; }
+  .boxes-footer { margin-top: auto; border-top: none; padding: var(--sp) 24px 24px; }
+  .boxes-footer .btn { height: 72px; }  /* tamanho original dos botões do design system */
+  .boxes-footer .btn:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+  /* janelas mais baixas: compacta o conteúdo (botões mantêm 72px) para não ter scroll */
+  @media (max-height: 800px) {
+    .boxes-screen { --sp: clamp(7px, 1.6svh, 20px); --key: clamp(40px, 6svh, 60px); }
+    .boxes-screen .scan-header { padding-top: 6px; }
+    .boxes-screen .scan-menu-btn { height: 48px; }
+    .boxes-header { padding-bottom: 0; }
+    .calc-display .boxes-total-formula { line-height: 18px; }
+    .boxes-footer { padding-bottom: 16px; }
+  }
+  /* Confira se é o mesmo produto: sem scroll; imagem ao lado do nome, dados em lista */
+  .product-screen { overflow: hidden; }
+  .product-info { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; padding: 16px 24px 0; }
+  .product-grid { display: none; flex-direction: column; }
+  .product-grid.active { display: flex; }
+  .product-card { background: #f3f3f9; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 4px; }
+  .product-pill { display: none; align-self: flex-start; margin-top: 6px; padding: 2px 12px; border-radius: 999px; background: #e0e9ff; color: #4850e5; font-size: 14px; font-weight: 600; line-height: 20px; }
+  .product-card[data-tab="detalhes"] .product-info-image { display: none; }
+  .product-card[data-tab="detalhes"] .product-info-name > .product-char-label, .product-card[data-tab="detalhes"] .product-info-title { display: none; }
+  .product-card[data-tab="detalhes"] .product-pill { margin-top: 0; }
+  .product-card[data-tab="detalhes"] .product-pill { display: inline-block; }
+  .product-card .product-info-head { padding-bottom: 16px; border-bottom: 1px solid #dedfed; }
+  .product-info-head { display: flex; align-items: center; gap: 16px; }
+  .product-info-image { flex: 0 0 88px; height: 88px; display: flex; align-items: center; justify-content: center; background: #fff; border: 1px solid #dedfed; border-radius: 12px; padding: 6px; }
+  .product-info-image img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .product-info-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .product-info-title { font-size: 20px; font-weight: 600; line-height: 26px; letter-spacing: -0.2px; color: #1c1c2b; }
+  .spec-tabs { padding: 0; }
+  .product-cell { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: clamp(4px, calc((100svh - 540px) / 16), 14px) 0; border-bottom: 1px solid #dedfed; }
+  .product-cell:last-child { border-bottom: none; }
+  .product-cell-value { font-size: 16px; font-weight: 500; line-height: 22px; color: #1c1c2b; text-align: left; }
+  .product-screen .boxes-footer { border-top: none; padding: 12px 24px 24px; }
+  .product-screen .boxes-footer .btn { height: 72px; }
+  /* Quantas camadas completas? */
+  .layers-screen { overflow: hidden; position: relative; }
+  /* Teclado numérico ilustrativo (protótipo desktop): aparece ao focar o campo da linha */
+  .iso-keypad { display: none; position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; padding: 12px 24px 20px; background: #ffffff; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  body.modo-livre.keypad-open .iso-keypad { display: grid; }
+  .iso-key { height: 52px; border: none; border-radius: 12px; background: #f7f7fb; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 24px; font-weight: 500; color: #1c1c2b; cursor: pointer; }
+  .iso-key:active { background: #dedfed; }
+  .iso-key--ok { background: #4850e5; color: #ffffff; font-size: 18px; font-weight: 600; }
+  .layers-illus { flex: 1; min-height: 0; margin: 16px 24px 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; background: transparent; border: 1px solid #dedfed; border-radius: 16px; padding: 24px 20px 28px; }
+  .pallet-stack { width: 100%; max-width: 260px; display: flex; flex-direction: column-reverse; align-items: stretch; gap: 4px; }
+  .pallet-base { display: flex; flex-direction: column; margin-top: 2px; }
+  .pallet-deck { display: block; height: 10px; border-radius: 3px; background: #c89a5b; }
+  .pallet-feet { display: flex; justify-content: space-between; padding: 0 6px; }
+  .pallet-feet i { width: 34px; height: 10px; background: #a97b3f; border-radius: 0 0 3px 3px; }
+  .pallet-layer { height: var(--lh, 22px); display: flex; gap: 4px; }
+  .pallet-layer i { flex: 1; min-width: 0; background: #e2b36f; border: 1px solid #b9854a; border-radius: 2px; }
+  .pallet-layer.ghost i { background: transparent; border: 1.5px dashed #8a8aab; }
+  /* marcação pontilhada da camada, mantida mesmo com as caixas já aplicadas */
+  .pallet-layer { outline: 1px dashed #c3c3d9; outline-offset: 1px; }
+  .pallet-loose { display: flex; flex-wrap: nowrap; gap: var(--loose-gap, 2px); justify-content: flex-start; overflow: hidden; }
+  .pallet-loose.dense i { border: 0; box-sizing: border-box; }
+  .pallet-loose i { flex: none; width: var(--loose-bw, var(--bw, 28px)); height: var(--lh, 22px); background: #cfd9ee; border: 1px solid #7d8fb8; border-radius: 2px; }
+  .layers-tabs { padding: 28px 24px 0; }
+  .layers-tabs .product-tab { height: auto; min-height: 56px; padding: 6px 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; }
+  .layers-tabs .product-tab { white-space: nowrap; }
+  .layers-tabs .product-tab { flex: 1 1 auto; padding-left: 10px; padding-right: 10px; }
+  .layers-tabs .product-tab:disabled { opacity: .4; cursor: not-allowed; }
+  .layers-tab-label { font-size: 12px; line-height: 16px; font-weight: 500; }
+  .layers-tab-value { font-size: 20px; line-height: 26px; font-weight: 600; }
+  .layers-stepper { display: flex; align-items: center; gap: 12px; padding: 28px 24px 0; }
+  .layers-step-btn { flex: 0 0 64px; height: 64px; border: none; border-radius: 16px; font-family: inherit; font-size: 32px; font-weight: 500; line-height: 1; cursor: pointer; }
+  .layers-step-btn.minus { background: #e0e9ff; color: #4850e5; }
+  .layers-step-btn.plus { background: #4850e5; color: #fff; }
+  .layers-step-btn:disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
+  .layers-field { flex: 1; min-width: 0; height: 64px; display: flex; align-items: center; justify-content: center; font-size: 36px; font-weight: 600; color: #1c1c2b; }
+  .layers-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 24px 32px; margin-top: 28px; border-top: 1px solid #dedfed; }
+  .layers-total { display: flex; flex-direction: column; }
+  .layers-total-label { font-size: 12px; line-height: 16px; color: #5a5a7c; }
+  .layers-total-value { font-size: 28px; font-weight: 600; line-height: 34px; color: #1c1c2b; }
+  .layers-footer .btn:disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
+  .layers-footer .btn { width: auto; flex: 0 0 auto; padding: 0 32px; height: 64px; }
+  @media (max-height: 800px) { .layers-illus { margin-top: 8px; padding: 16px 16px 20px; } .layers-tabs, .layers-stepper { padding-top: 16px; } .layers-footer { margin-top: 16px; padding-top: 16px; } }
+  @media (max-height: 760px) { .layers-step-btn, .layers-field { height: 52px; } .layers-footer { padding-bottom: 16px; } .layers-tabs .product-tab { min-height: 48px; } }
+  /* ── Visão isométrica (estilos próprios, prefixo iso-) ── */
+  .iso-illus { flex: 1; min-height: 0; margin: 16px 24px 8px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; background: transparent; border: 1px solid #dedfed; border-radius: 16px; padding: 24px 20px 28px; }
+  .iso-tabs { padding: 8px 24px 0; }
+  .iso-tabs .product-tabs { position: relative; display: flex; flex-wrap: wrap; justify-content: space-between; column-gap: 8px; row-gap: 8px; background: none; border-radius: 0; padding: 0; }
+  .iso-tabs .product-tabs::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: #dedfed; }
+  .iso-tabs .product-tab { position: relative; flex: 0 0 auto; height: auto; min-height: 0; padding: 0 0 10px; display: flex; flex-direction: row; align-items: baseline; gap: 3px; background: none; border: none; border-radius: 0; box-shadow: none; color: #8a8aab; font-size: 15px; font-weight: 500; line-height: 22px; white-space: nowrap; }
+  .iso-tabs .product-tab.active { background: none; color: #1c1c2b; font-weight: 600; }
+  .iso-tabs .product-tab.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: #4850e5; }
+  .iso-tabs .product-tab:disabled { opacity: .4; cursor: not-allowed; }
+  .iso-tab-label { font-size: inherit; line-height: inherit; font-weight: inherit; }
+  .iso-stepper { display: flex; align-items: center; gap: 12px; padding: 32px 24px 0; }
+  .iso-step-btn { flex: 0 0 64px; height: 64px; padding: 0; display: flex; align-items: center; justify-content: center; border: none; border-radius: 16px; cursor: pointer; }
+  .iso-step-btn svg { display: block; }
+  .iso-step-btn.minus { background: #e0e9ff; color: #4850e5; }
+  .iso-step-btn.plus { background: #4850e5; color: #fff; }
+  .iso-step-btn:disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
+  .iso-field { flex: 1; min-width: 0; height: 64px; display: flex; align-items: center; justify-content: center; font-size: 36px; font-weight: 600; color: #1c1c2b; }
+  .iso-input-row { display: none; padding: 32px 24px 0; }
+  /* Modo livre: etapas (Camadas > Caixas por camada > Caixas avulsas) no lugar das abas */
+  .livre-steps { display: none; padding: 16px 24px 0; }
+  body.modo-livre .livre-steps { display: block; }
+  body.modo-livre .iso-tabs { display: none; }
+  body.modo-livre .iso-footer { border-top: none; margin-top: 16px; }
+  /* Ordem no modo livre: etapa e campo ficam acima da imagem, para o teclado (sobreposto na base) não cobrir o número */
+  body.modo-livre .livre-steps { order: 1; }
+  body.modo-livre .iso-input-row { order: 2; }
+  body.modo-livre .iso-illus { order: 3; }
+  body.modo-livre .iso-footer { order: 4; }
+  .livre-step-count { font-size: 12px; line-height: 16px; color: #5a5a7c; }
+  .livre-step-title { font-size: 20px; font-weight: 600; line-height: 28px; letter-spacing: -0.2px; color: #1c1c2b; margin-top: 4px; }
+  .livre-progress { display: flex; gap: 6px; margin-top: 12px; }
+  .livre-seg { flex: 1; height: 4px; padding: 0; border: none; border-radius: 9999px; background: #dedfed; cursor: pointer; }
+  .livre-seg.on { background: #4850e5; }
+  .livre-seg:disabled { cursor: not-allowed; }
+  body.modo-livre .iso-stepper { display: none; }
+  body.modo-livre .iso-input-row { display: block; }
+  .iso-input { width: 100%; height: 64px; border: none; border-bottom: 2px solid #4850e5; border-radius: 0; background: transparent; text-align: center; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 36px; font-weight: 600; color: #1c1c2b; outline: none; }
+  .iso-input::placeholder { color: #9ca0bf; }
+  .iso-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 24px 32px; margin-top: 32px; border-top: 1px solid #dedfed; }
+  .iso-total { display: flex; flex-direction: column; }
+  .iso-total-label { font-size: 12px; line-height: 16px; color: #5a5a7c; }
+  .iso-total-value { font-size: 28px; font-weight: 600; line-height: 34px; color: #1c1c2b; }
+  .iso-footer .btn:disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
+  .iso-footer .btn { width: auto; flex: 0 0 auto; padding: 0 32px; height: 64px; }
+  @media (max-height: 800px) { .iso-illus { margin-top: 8px; margin-bottom: 8px; padding: 16px 16px 20px; } .iso-tabs { padding-top: 8px; } .iso-stepper { padding-top: 24px; } .iso-footer { margin-top: 24px; padding-top: 16px; } }
+  @media (max-height: 760px) { .iso-step-btn, .iso-field { height: 52px; } .iso-footer { padding-bottom: 16px; } }
+  .layers-view { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .layers-view[hidden] { display: none; }
+  /* Tela de carregamento "Imprimindo o comprovante" (referência de design) */
+  .loading-screen { background: #ffffff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px; height: 100%; padding: 0 24px; }
+  .loading-visual { position: relative; width: 136px; height: 136px; border-radius: 9999px; background: #ededf7; display: flex; align-items: center; justify-content: center; }
+  .loading-visual .loading-icon { width: 48px; height: 48px; }
+  .loading-spinner { position: absolute; inset: -12px; width: calc(100% + 24px); height: calc(100% + 24px); animation: loading-spin 1s linear infinite; }
+  @keyframes loading-spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 22px; font-weight: 500; line-height: 28px; letter-spacing: -0.2px; color: #1c1c2b; text-align: center; }
+</style>
+</head>
+<body class="on-scan">
+
+
+
+
+
+
+
+
+
+
+
+<div class="preview-wrap">
+<div class="armazenar-screen" data-screen="usecase">
+
+  <div class="usecase-hello">
+    <p class="usecase-hello-title">Olá!</p>
+    <p class="usecase-hello-desc">Veja os drafts da nova experiência de DCI, criada para <strong>simplificar e unificar os fluxos, com agilidade e escala.</strong></p>
+  </div>
+
+  <p class="armazenar-title usecase-title">Casos de uso</p>
+
+  <div class="armazenar-list usecase-list">
+    <button class="armazenar-option" type="button" onclick="go('usecase-info')">
+      <div class="armazenar-option-body">
+        <span class="armazenar-option-title">Pallet PPI (Produtos iguais)</span>
+      </div>
+      <img class="armazenar-option-chevron" src="./assets/chevron-right.svg" width="20" height="20" alt="" />
+    </button>
+    <button class="armazenar-option is-disabled" type="button" disabled>
+      <div class="armazenar-option-body">
+        <div class="is-title-row">
+          <span class="armazenar-option-title">Carga batida</span>
+          <span class="is-badge is-badge--soon">Em breve</span>
+        </div>
+      </div>
+      <img class="armazenar-option-chevron" src="./assets/chevron-right.svg" width="20" height="20" alt="" />
+    </button>
+    <button class="armazenar-option is-disabled" type="button" disabled>
+      <div class="armazenar-option-body">
+        <div class="is-title-row">
+          <span class="armazenar-option-title">Sem cadastro</span>
+          <span class="is-badge is-badge--soon">Em breve</span>
+        </div>
+      </div>
+      <img class="armazenar-option-chevron" src="./assets/chevron-right.svg" width="20" height="20" alt="" />
+    </button>
+    <button class="armazenar-option is-disabled" type="button" disabled>
+      <div class="armazenar-option-body">
+        <div class="is-title-row">
+          <span class="armazenar-option-title">Sem cubagem</span>
+          <span class="is-badge is-badge--soon">Em breve</span>
+        </div>
+      </div>
+      <img class="armazenar-option-chevron" src="./assets/chevron-right.svg" width="20" height="20" alt="" />
+    </button>
+  </div>
+
+  <div class="nav-hint">
+    <p class="nav-hint-title">Como navegar</p>
+    <ol class="nav-hint-steps">
+      <li>Toque na tela para avançar e na borda esquerda para voltar.</li>
+      <li>Menus e botões também têm ações.</li>
+    </ol>
+  </div>
+
+</div>
+<div class="armazenar-screen" data-screen="usecase-info" hidden>
+
+  <div class="armazenar-header">
+    <button class="armazenar-back-btn" aria-label="Voltar" onclick="go('usecase')">
+      <img src="./assets/arrow-left.svg" width="24" height="24" alt="Voltar" />
+    </button>
+  </div>
+
+  <p class="armazenar-title">Pallet PPI (Produtos iguais)</p>
+
+
+
+  <ul class="info-list">
+    <li class="info-item">Caso mais representativo de DCI</li>
+    <li class="info-item">51% do ingresso total do fluxo</li>
+    <li class="info-item">Maior índice de erro: 1 em 10 pallets</li>
+    <li class="info-item">Meli com controle total; os outros casos dependem do seller ou de outras equipes</li>
+    <li class="info-item">Base do fluxo: o primeiro bip é a etiqueta do contenedor e os outros casos viram desvios</li>
+  </ul>
+
+  <section class="action">
+    <div class="action__buttons">
+      <button class="btn btn--primary" onclick="go('home')">Ir para fluxo</button>
+    </div>
+  </section>
+
+</div>
+<!-- Menu inicial (igual ao Home do Put away) -->
+<div class="home-screen" data-screen="home" hidden>
+  <header class="home-header">
+    <p class="home-greeting-small">Olá!</p>
+    <p class="home-greeting-title">O que você vai fazer?</p>
+  </header>
+
+  <main class="home-menu">
+    <div class="home-card" role="button" tabindex="0" aria-label="Recebimento massivo" onclick="go('scan')">
+      <div class="home-icon-wrap">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+             stroke="#4a4adb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1" y="3" width="15" height="13" rx="1.5"/>
+          <path d="M16 8h4l3 3v5h-7V8z"/>
+          <circle cx="5.5" cy="18.5" r="2.5"/>
+          <circle cx="18.5" cy="18.5" r="2.5"/>
+        </svg>
+      </div>
+      <p class="home-card-label">Recebimento massivo</p>
+    </div>
+  </main>
+
+  <nav class="home-navbar" aria-label="Navegação principal">
+    <div class="home-nav-item is-disabled" role="button" tabindex="-1" aria-disabled="true" aria-label="Início">
+      <div class="home-nav-selected-pill">
+        <div class="home-nav-icon-wrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+               stroke="#1c1c2b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+    <div class="home-nav-item is-disabled" role="button" tabindex="-1" aria-disabled="true" aria-label="Perfil">
+      <div class="home-nav-icon-wrap">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+             stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+      </div>
+      <span class="home-nav-label">Perfil</span>
+    </div>
+  </nav>
+</div>
+
+<div class="scan-screen" data-screen="scan" hidden>
+
+  <!-- HEADER: só menu btn à direita -->
+  <div class="scan-header">
+    <button class="scan-menu-btn" aria-label="Menu" onclick="toggleMenu(true)">
+      <img src="./assets/menu.svg" width="32" height="32" alt="Menu" />
+    </button>
+  </div>
+
+  <!-- CONTENT: instrução + área de scan -->
+  
+  <div class="scan-content">
+    <p class="scan-instruction">Escaneie a porta número 1</p>
+    <div class="scan-image-area">
+      <img src="./assets/doca.png" alt="Doca" style="width:100%;height:100%;object-fit:contain;" />
+    </div>
+  </div>
+
+</div>
+<div class="action-screen" data-screen="action" hidden>
+
+  <header class="header">
+    <div class="header__spacer"></div>
+    <button class="header__menu-btn" aria-label="Menu" onclick="toggleMenu(true)">
+      <img src="./assets/menu.svg" width="32" height="32" alt="Menu" />
+    </button>
+  </header>
+
+  <main class="content">
+    <div class="main-content">
+      <div class="image-slot">
+        <img src="./assets/paleteira.png" alt="Paleteira">
+      </div>
+      <div class="text-group">
+        <p class="text-group__title">Prepare-se para descarregar</p>
+        <p class="text-group__subtitle">Você usará MUs e uma paleteira.</p>
+      </div>
+    </div>
+  </main>
+
+  <section class="action">
+    <div class="action__buttons">
+      <button class="btn btn--primary" onclick="go('scan-pallet')">Já preparei</button>
+    </div>
+  </section>
+
+</div>
+<div class="scan-screen" data-screen="scan-pallet" hidden>
+
+  <div class="scan-header">
+    <button class="scan-menu-btn" aria-label="Menu" onclick="toggleMenu(true)">
+      <img src="./assets/menu.svg" width="32" height="32" alt="Menu" />
+    </button>
+  </div>
+
+  <div class="scan-content">
+    <p class="scan-instruction">Escaneie um HU</p>
+    <div class="scan-image-area">
+      <img src="./assets/pallet-caixa.png" alt="HU" style="width:100%;height:100%;object-fit:contain;" />
+    </div>
+  </div>
+
+</div>
+
+<div class="scan-screen" data-screen="scan-mu" hidden>
+
+  <div class="scan-header">
+    <button class="scan-menu-btn" aria-label="Menu" onclick="toggleMenu(true)">
+      <img src="./assets/menu.svg" width="32" height="32" alt="Menu" />
+    </button>
+  </div>
+
+  <div class="scan-content">
+    <p class="scan-instruction">Escaneie um MU vazio</p>
+    <div class="scan-image-area">
+      <img src="./assets/mu.png" alt="MU vazio" style="width:100%;height:100%;object-fit:contain;" />
+    </div>
+  </div>
+
+
+</div>
+
+<div class="scan-screen" data-screen="scan-impressora" hidden>
+
+  <div class="scan-header">
+    <button class="scan-menu-btn" aria-label="Menu" onclick="toggleMenu(true)">
+      <img src="./assets/menu.svg" width="32" height="32" alt="Menu" />
+    </button>
+  </div>
+
+  <div class="scan-content">
+    <p class="scan-instruction">Escaneie uma impressora</p>
+    <div class="scan-image-area">
+      <img src="./assets/impressora.png" alt="Impressora" style="width:240px;height:240px;object-fit:contain;" />
+    </div>
+  </div>
+
+</div>
+<div class="loading-screen" data-screen="imprimindo" hidden>
+  <div class="loading-visual">
+    <svg class="loading-spinner" viewBox="0 0 160 160" fill="none" aria-hidden="true">
+      <circle cx="80" cy="80" r="77" stroke="#2f2f46" stroke-width="3" stroke-linecap="round" stroke-dasharray="46 438" />
+    </svg>
+    <img class="loading-icon" src="./assets/printer.svg" width="48" height="48" alt="" />
+  </div>
+  <p class="loading-text">Imprimindo o comprovante</p>
+</div>
+
+<div class="action-screen" data-screen="action-comprovante" hidden>
+
+  <header class="header">
+    <div class="header__spacer"></div>
+    <button class="header__menu-btn" aria-label="Menu" onclick="toggleMenu(true)">
+      <img src="./assets/menu.svg" width="32" height="32" alt="Menu" />
+    </button>
+  </header>
+
+  <main class="content">
+    <div class="main-content">
+      <div class="image-slot">
+        <img src="./assets/comprovante.png" alt="Comprovante">
+      </div>
+      <div class="text-group">
+        <p class="text-group__title">Entregue uma via do comprovante para o motorista</p>
+      </div>
+    </div>
+  </main>
+
+  <section class="action">
+    <div class="action__buttons">
+      <button class="btn btn--primary" onclick="go('usecase')">Entreguei</button>
+    </div>
+  </section>
+
+</div>
+
+<div class="scan-screen" data-screen="scan-produto" hidden>
+
+  <div class="scan-header">
+    <button class="scan-menu-btn" aria-label="Menu" onclick="toggleMenu(true)">
+      <img src="./assets/menu.svg" width="32" height="32" alt="Menu" />
+    </button>
+  </div>
+
+  <div class="scan-content">
+    <div class="scan-title-group">
+      <p class="scan-instruction">Escaneie um produto</p>
+      <p class="scan-subtitle">HU: 7731946520</p>
+    </div>
+    <div class="scan-image-area">
+      <img src="./assets/product.png" alt="Produto" style="width:100%;height:100%;object-fit:contain;" />
+    </div>
+  </div>
+
+</div>
+
+<div class="scan-screen product-screen" data-screen="produto-detalhe" hidden>
+
+  <div class="scan-header boxes-header">
+    <p class="boxes-header-title">Confira se é o mesmo produto</p>
+    <button class="scan-menu-btn" aria-label="Menu" onclick="toggleMenu(true)">
+      <img src="./assets/menu.svg" width="32" height="32" alt="Menu" />
+    </button>
+  </div>
+
+  <div class="product-info">
+    <div class="product-tabs-wrapper spec-tabs">
+      <div class="product-tabs" role="tablist">
+        <button class="product-tab active" id="spec-tab-geral" role="tab" onclick="showSpecTab('geral')">Geral</button>
+        <button class="product-tab" id="spec-tab-detalhes" role="tab" onclick="showSpecTab('detalhes')">Mais detalhes</button>
+      </div>
+    </div>
+    <div class="product-card" id="product-card" data-tab="geral">
+      <div class="product-info-head">
+        <div class="product-info-image">
+          <img src="./assets/airfrayer.png" alt="Airfryer Philips" />
+        </div>
+        <div class="product-info-name">
+          <span class="product-char-label">Produto</span>
+          <span class="product-info-title">Airfryer Philips Série 3000 4,1 L</span>
+          <span class="product-pill">GM</span>
+        </div>
+      </div>
+      <div class="product-grid active" id="spec-panel-geral">
+        <div class="product-cell">
+          <span class="product-char-label">EAN</span>
+          <span class="product-cell-value">8710103976128</span>
+        </div>
+        <div class="product-cell">
+          <span class="product-char-label">Voltagem</span>
+          <span class="product-cell-value">127 V</span>
+        </div>
+        <div class="product-cell">
+          <span class="product-char-label">Cor</span>
+          <span class="product-cell-value">Preto</span>
+        </div>
+      </div>
+      <div class="product-grid" id="spec-panel-detalhes">
+        <div class="product-cell">
+          <span class="product-char-label">SKU</span>
+          <span class="product-cell-value">ML AELY1234</span>
+        </div>
+        <div class="product-cell">
+          <span class="product-char-label">Potência</span>
+          <span class="product-cell-value">1400 W</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="boxes-footer">
+    <div class="action__buttons">
+      <button class="btn btn--primary" onclick="go('camadas')">É o mesmo produto</button>
+      <button class="btn btn--secondary">O produto é diferente</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="scan-screen layers-screen" data-screen="camadas" hidden>
+
+  <div class="scan-header boxes-header">
+    <p class="boxes-header-title">Conte as caixas</p>
+    <button class="scan-menu-btn" aria-label="Menu" onclick="toggleMenu(true)">
+      <img src="./assets/menu.svg" width="32" height="32" alt="Menu" />
+    </button>
+  </div>
+
+  <div class="layers-view" id="view-iso">
+<div class="iso-illus" aria-label="Ilustração isométrica do palet">
+    <svg id="iso-svg" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMax meet"></svg>
+  </div>
+
+  <div class="product-tabs-wrapper iso-tabs">
+    <div class="product-tabs" role="tablist">
+      <button class="product-tab active" id="iso-tab-cam" role="tab" onclick="layersSelect('cam')">
+        <span class="iso-tab-label">Camadas</span>
+      </button>
+      <button class="product-tab" id="iso-tab-per" role="tab" onclick="layersSelect('per')">
+        <span class="iso-tab-label">Caixas por camada</span>
+      </button>
+      <button class="product-tab" id="iso-tab-avu" role="tab" onclick="layersSelect('avu')">
+        <span class="iso-tab-label">Caixas avulsas</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="iso-stepper">
+    <button class="iso-step-btn minus" id="iso-minus" aria-label="Diminuir" onclick="layersStep(-1)"><svg width="32" height="32" viewBox="0 0 32 32" fill="none"><line x1="8" y1="16" x2="24" y2="16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+    <div class="iso-field" id="iso-field" aria-live="polite">0</div>
+    <button class="iso-step-btn plus" id="iso-plus" aria-label="Aumentar" onclick="layersStep(1)"><svg width="32" height="32" viewBox="0 0 32 32" fill="none"><line x1="8" y1="16" x2="24" y2="16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="16" y1="8" x2="16" y2="24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+  </div>
+
+  <div class="livre-steps">
+    <p class="livre-step-count" id="livre-step-count">Etapa 1 de 3</p>
+    <p class="livre-step-title" id="livre-step-title">Camadas</p>
+    <div class="livre-progress">
+      <button class="livre-seg" type="button" aria-label="Etapa 1" onclick="livreGoTo(0)"></button>
+      <button class="livre-seg" type="button" aria-label="Etapa 2" onclick="livreGoTo(1)"></button>
+      <button class="livre-seg" type="button" aria-label="Etapa 3" onclick="livreGoTo(2)"></button>
+    </div>
+  </div>
+
+  <div class="iso-input-row" onclick="document.getElementById('iso-input').focus()">
+    <input class="iso-input" id="iso-input" type="text" inputmode="none" maxlength="3" autocomplete="off" placeholder="0" aria-label="Quantidade (máximo 100)" onfocus="document.body.classList.add('keypad-open')" onblur="layersCommit(this)" oninput="layersType(this)" />
+  </div>
+
+  <div class="iso-footer">
+    <div class="iso-total">
+      <span class="iso-total-label">Total do pallet</span>
+      <span class="iso-total-value" id="iso-total">0 caixas</span>
+    </div>
+    <button class="btn btn--primary" id="iso-finish" onclick="layersConfirm()">Confirmar</button>
+  </div>
+
+  <div class="iso-keypad" aria-label="Teclado numérico">
+    <button class="iso-key" type="button" onclick="keypadPress('1')">1</button>
+    <button class="iso-key" type="button" onclick="keypadPress('2')">2</button>
+    <button class="iso-key" type="button" onclick="keypadPress('3')">3</button>
+    <button class="iso-key" type="button" onclick="keypadPress('4')">4</button>
+    <button class="iso-key" type="button" onclick="keypadPress('5')">5</button>
+    <button class="iso-key" type="button" onclick="keypadPress('6')">6</button>
+    <button class="iso-key" type="button" onclick="keypadPress('7')">7</button>
+    <button class="iso-key" type="button" onclick="keypadPress('8')">8</button>
+    <button class="iso-key" type="button" onclick="keypadPress('9')">9</button>
+    <button class="iso-key" type="button" aria-label="Apagar" onclick="keypadPress('back')">&#9003;</button>
+    <button class="iso-key" type="button" onclick="keypadPress('0')">0</button>
+    <button class="iso-key iso-key--ok" type="button" onclick="keypadDone()">OK</button>
+  </div>
+</div>
+
+<div class="layers-view" id="view-flat" hidden>
+<div class="layers-illus" aria-label="Ilustração do palet">
+    <div class="pallet-stack" id="pallet-stack"></div>
+  </div>
+
+  <div class="product-tabs-wrapper layers-tabs">
+    <div class="product-tabs" role="tablist">
+      <button class="product-tab active" id="lt-cam" role="tab" onclick="layersSelect('cam')">
+        <span class="layers-tab-label">Camadas</span><span class="layers-tab-value" id="lv-cam">0</span>
+      </button>
+      <button class="product-tab" id="lt-per" role="tab" onclick="layersSelect('per')">
+        <span class="layers-tab-label">Caixas por camada</span><span class="layers-tab-value" id="lv-per">0</span>
+      </button>
+      <button class="product-tab" id="lt-avu" role="tab" onclick="layersSelect('avu')">
+        <span class="layers-tab-label">Caixas avulsas</span><span class="layers-tab-value" id="lv-avu">0</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="layers-stepper">
+    <button class="layers-step-btn minus" id="layers-minus" aria-label="Diminuir" onclick="layersStep(-1)">−</button>
+    <div class="layers-field" id="layers-field" aria-live="polite">0</div>
+    <button class="layers-step-btn plus" id="layers-plus" aria-label="Aumentar" onclick="layersStep(1)">+</button>
+  </div>
+
+  <div class="layers-footer">
+    <div class="layers-total">
+      <span class="layers-total-label">Total do pallet</span>
+      <span class="layers-total-value" id="layers-total">0 caixas</span>
+    </div>
+    <button class="btn btn--primary" id="layers-finish" onclick="layersConfirm()">Confirmar</button>
+  </div>
+</div>
+</div>
+
+<div class="transit-screen" data-screen="transit" hidden>
+
+  <div class="transit-header">
+    <button class="transit-menu-btn" aria-label="Menu" onclick="toggleMenu(true)">
+      <img src="./assets/menu-light.svg" width="32" height="32" alt="Menu" />
+    </button>
+  </div>
+
+  <div class="transit-content">
+    <p class="transit-instruction">Puxe o MU e continue o descarregamento</p>
+
+    <div class="transit-address">
+      <div class="transit-card">
+        <span class="transit-card-label">Área</span>
+        <span class="transit-card-value-lg">Espera da doca</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ATTENTION SHEET: confirmação da contagem (bottom sheet com dimmer) -->
+<div class="menu-dimmer" id="attention-dimmer" onclick="toggleAttention(false)"></div>
+<div class="menu-sheet attention-sheet" id="attention-sheet" role="dialog" aria-modal="true" aria-labelledby="attention-title">
+  <div class="menu-sheet-header">
+    <span></span>
+    <button class="menu-close-btn" aria-label="Fechar" onclick="toggleAttention(false)">
+      <img src="./assets/close.svg" width="24" height="24" alt="Fechar" />
+    </button>
+  </div>
+  <div class="menu-confirm-body">
+    <img src="./assets/feedback-caution.svg" alt="" class="menu-confirm-icon" />
+    <p class="menu-confirm-text" id="attention-title">Confirme apenas se tiver certeza da quantidade</p>
+    <p class="attention-desc">Revise a contagem para evitar divergências e auditorias.</p>
+  </div>
+  <div class="menu-confirm-footer">
+    <button class="btn-main" onclick="attentionConfirm()">Tenho certeza</button>
+    <button class="btn-loud" onclick="toggleAttention(false)">Revisar</button>
+  </div>
+</div>
+
+<!-- EMPTY SHEET: contagem sem quantidade informada (bottom sheet com dimmer) -->
+<div class="menu-dimmer" id="empty-dimmer" onclick="toggleEmpty(false)"></div>
+<div class="menu-sheet attention-sheet" id="empty-sheet" role="dialog" aria-modal="true" aria-labelledby="empty-title">
+  <div class="menu-sheet-header">
+    <span></span>
+    <button class="menu-close-btn" aria-label="Fechar" onclick="toggleEmpty(false)">
+      <img src="./assets/close.svg" width="24" height="24" alt="Fechar" />
+    </button>
+  </div>
+  <div class="menu-confirm-body">
+    <img src="./assets/feedback-caution.svg" alt="" class="menu-confirm-icon" />
+    <p class="menu-confirm-text" id="empty-title">Informe a quantidade de caixas do pallet</p>
+    <p class="attention-desc">Preencha as camadas, as caixas por camada ou as avulsas para continuar.</p>
+  </div>
+  <div class="menu-confirm-footer">
+    <button class="btn-main" onclick="toggleEmpty(false)">Entendi</button>
+  </div>
+</div>
+
+<div class="snackbar" id="snackbar" role="status" aria-live="polite">
+  <svg class="snackbar-icon" id="snackbar-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="display:none;">
+    <circle cx="12" cy="12" r="9" stroke="#ffffff" stroke-width="1.5" />
+    <path d="M8 12.5L10.8 15.3L16 9.5" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+  </svg>
+  <div class="snackbar-content">
+    <span class="snackbar-message" id="snackbar-message"></span>
+    <div class="snackbar-track"><div class="snackbar-bar" id="snackbar-bar"></div></div>
+  </div>
+</div>
+
+<!-- FINISH SHEET: confirma o descarregamento antes de finalizar o recebimento -->
+<div class="menu-dimmer" id="finish-dimmer" onclick="toggleFinish(false)"></div>
+<div class="menu-sheet attention-sheet" id="finish-sheet" role="dialog" aria-modal="true" aria-labelledby="finish-title">
+  <div class="menu-sheet-header">
+    <span></span>
+    <button class="menu-close-btn" aria-label="Fechar" onclick="toggleFinish(false)">
+      <img src="./assets/close.svg" width="24" height="24" alt="Fechar" />
+    </button>
+  </div>
+  <div class="menu-confirm-body">
+    <img src="./assets/feedback-caution.svg" alt="" class="menu-confirm-icon" />
+    <p class="menu-confirm-text" id="finish-title">A descarga foi finalizada?</p>
+    <p class="attention-desc">Confirme que não há mais pallets ou caixas no veículo.</p>
+  </div>
+  <div class="menu-confirm-footer">
+    <button class="btn-main" onclick="toggleFinish(false); go('scan-impressora')">Confirmar</button>
+    <button class="btn-loud" onclick="toggleFinish(false)">Revisar</button>
+  </div>
+</div>
+
+<!-- MENU SHEET (componente Tetris, igual ao do Put away) -->
+<div class="menu-dimmer" id="menu-dimmer" onclick="toggleMenu(false)"></div>
+<div class="menu-sheet" id="menu-sheet">
+
+  <!-- View 1: lista de ações -->
+  <div id="menu-view-list">
+    <div class="menu-sheet-header">
+      <p class="menu-sheet-title">Mais ações</p>
+      <button class="menu-close-btn" aria-label="Fechar" onclick="toggleMenu(false)">
+        <img src="./assets/close.svg" width="24" height="24" alt="Fechar" />
+      </button>
+    </div>
+    <ul class="menu-list">
+      <li class="menu-list-item" id="menu-item-howto" onclick="showMenuView('howto')" hidden>Como contar caixas</li>
+      <li class="menu-list-item" id="menu-item-is" onclick="showMenuIs()">Ver IS's do caminhão</li>
+      <li class="menu-list-item" id="menu-item-finish" onclick="toggleMenu(false); toggleFinish(true)" hidden>Finalizar recebimento</li>
+      <li class="menu-list-item" onclick="showMenuConfirm()">Encerrar tarefa</li>
+      <li class="menu-list-item" onclick="go('home')">Ir ao menu inicial</li>
+    </ul>
+  </div>
+
+  <!-- View: Como contar caixas (bottom sheet com passos) -->
+  <div class="menu-view-howto" id="menu-view-howto">
+    <div class="menu-sheet-header">
+      <p class="menu-sheet-title">Como fazer a contagem</p>
+      <button class="menu-close-btn" aria-label="Fechar" onclick="toggleMenu(false)">
+        <img src="./assets/close.svg" width="24" height="24" alt="Fechar" />
+      </button>
+    </div>
+    <div class="product-tabs-wrapper howto-tabs">
+      <div class="product-tabs" role="tablist">
+        <button class="product-tab active" id="howto-tab-regular" role="tab" onclick="showHowtoTab('regular')">Pallets regulares</button>
+        <button class="product-tab" id="howto-tab-irregular" role="tab" onclick="showHowtoTab('irregular')">Pallets irregulares</button>
+      </div>
+    </div>
+    <div class="howto-body" id="howto-panel-regular">
+      <div class="howto-illustration" id="howto-illustration"></div>
+      <div class="howto-steps" id="howto-steps" role="tablist"></div>
+      <p class="howto-step-title" id="howto-step-title"></p>
+      <p class="howto-step-desc" id="howto-step-desc"></p>
+    </div>
+    <div class="howto-body" id="howto-panel-irregular" hidden>
+      <p class="howto-step-desc">Em breve.</p>
+    </div>
+  </div>
+
+  <!-- View: IS's registradas no caminhão (consulta) -->
+  <div class="menu-view-is" id="menu-view-is">
+    <div class="menu-sheet-header menu-sheet-header--is">
+      <button class="menu-back-btn" aria-label="Voltar" onclick="showMenuList()">
+        <img src="./assets/arrow-left.svg" width="24" height="24" alt="Voltar" />
+      </button>
+      <p class="menu-sheet-title">IS's no caminhão</p>
+      <button class="menu-close-btn" aria-label="Fechar" onclick="toggleMenu(false)">
+        <img src="./assets/close.svg" width="24" height="24" alt="Fechar" />
+      </button>
+    </div>
+    <div class="menu-scroll">
+      <div class="armazenar-list is-list sheet-is-list" id="is-list-sheet"></div>
+    </div>
+    <div class="menu-confirm-footer">
+      <button class="btn-loud btn-stack">Adicionar nova IS</button>
+    </div>
+  </div>
+
+  <!-- View 2: confirmação de encerrar tarefa -->
+  <div class="menu-view-confirm" id="menu-view-confirm">
+    <div class="menu-sheet-header">
+      <button class="menu-back-btn" aria-label="Voltar" onclick="showMenuList()">
+        <img src="./assets/arrow-left.svg" width="24" height="24" alt="Voltar" />
+      </button>
+    </div>
+    <div class="menu-confirm-body">
+      <img src="./assets/feedback-caution.svg" alt="" class="menu-confirm-icon" />
+      <p class="menu-confirm-text">Quer encerrar sua tarefa atual?</p>
+    </div>
+    <div class="menu-confirm-footer">
+      <button class="btn-main" onclick="go('home')">Encerrar tarefa</button>
+      <button class="btn-loud" onclick="showMenuList()">Cancelar</button>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+  // ── IS's do caminhão (usada na tela de lista e no menu) ─────────
+  var IS_LIST = [
+    { id: 'IS 458201', seller: 'Seller A', cargo: '3 palets, Airfryer Philips', tags: [['Alto valor', 'alto-valor']] },
+    { id: 'IS 458202', seller: 'Seller C', cargo: '2 caixas master, Fralda Pampers', tags: [['Caixa master', 'caixa-master']] },
+    { id: 'IS 458203', seller: 'Seller D', cargo: 'Sem detalhe da carga', tags: [] }
+  ];
+
+  function isListHtml() {
+    return IS_LIST.map(function (is) {
+      return '<div class="armazenar-option"><div class="armazenar-option-body">' +
+        '<div class="is-title-row"><span class="armazenar-option-title">' + is.id + '</span>' +
+        is.tags.map(function (t) { return '<span class="is-badge is-badge--' + t[1] + '">' + t[0] + '</span>'; }).join('') +
+        '</div><span class="armazenar-option-desc">' + is.seller + '</span>' +
+        '<span class="armazenar-option-desc">' + is.cargo + '</span></div></div>';
+    }).join('');
+  }
+
+  function renderIsLists() {
+    document.getElementById('is-list-sheet').innerHTML = isListHtml();
+  }
+  renderIsLists();
+
+  function toggleEmpty(open) {
+    document.getElementById('empty-dimmer').classList.toggle('open', open);
+    document.getElementById('empty-sheet').classList.toggle('open', open);
+  }
+
+  // Confirmar na tela de contagem: sem quantidade não avança; com quantidade pede confirmação
+  // Modo livre: etapa 1 Camadas > etapa 2 Caixas por camada > etapa 3 Caixas avulsas
+  var LIVRE_STEPS = ['cam', 'per', 'avu'];
+  var LIVRE_TITLES = { cam: 'Camadas', per: 'Caixas por camada', avu: 'Caixas avulsas' };
+  function livreCanReach(n) {
+    return !((n >= 1 && layers.cam === 0) || (n >= 2 && layers.per === 0));
+  }
+  function livreGoTo(n) {
+    if (!livreCanReach(n)) return;
+    keypadClose();
+    layers.sel = LIVRE_STEPS[n];
+    layersRender();
+  }
+  // OK: se a etapa atual já tem valor, avança e mantém o teclado aberto no campo da próxima; na última etapa fecha
+  function keypadDone() {
+    var i = LIVRE_STEPS.indexOf(layers.sel);
+    if (layersView === 'livre' && i < 2 && livreCanReach(i + 1)) {
+      layers.sel = LIVRE_STEPS[i + 1];
+      layersRender();
+      document.getElementById('iso-input').focus();
+    } else {
+      keypadClose();
+    }
+  }
+  function updateLivreSteps() {
+    var i = LIVRE_STEPS.indexOf(layers.sel);
+    document.getElementById('livre-step-count').textContent = 'Etapa ' + (i + 1) + ' de 3';
+    document.getElementById('livre-step-title').textContent = LIVRE_TITLES[layers.sel];
+    document.querySelectorAll('.livre-seg').forEach(function (b, n) {
+      b.classList.toggle('on', n <= i);
+      b.disabled = !livreCanReach(n);
+    });
+  }
+
+  function layersConfirm() {
+    var total = layers.cam * layers.per + layers.avu;
+    if (total === 0) toggleEmpty(true); else toggleAttention(true);
+  }
+
+  function attentionConfirm() { go('transit'); }
+
+  function toggleAttention(open) {
+    document.getElementById('attention-dimmer').classList.toggle('open', open);
+    document.getElementById('attention-sheet').classList.toggle('open', open);
+  }
+
+
+  // Passos do "Como contar as caixas do pallet" (ilustrações em breve)
+  var HOWTO_STEPS = [
+    { title: '1. Identifique uma camada', desc: 'Uma camada é o conjunto de caixas que forma um nível completo no pallet.', img: './assets/montagem-pallet1.jpg' },
+    { title: '2. Conte as caixas da camada', desc: 'Conte todas as caixas, da esquerda para a direita e da frente para trás.', img: './assets/montagem-pallet2.jpg' },
+    { title: '3. Conte as camadas', desc: 'Conte quantas camadas completas e iguais estão empilhadas.', img: './assets/montagem-pallet3.jpg' },
+    { title: '4. Pallet com camadas diferentes', desc: 'Se houver camadas com quantidades diferentes, conte cada conjunto separadamente.', img: './assets/montagem-pallet4.jpg' }
+  ];
+
+  function showHowtoTab(name) {
+    ['regular', 'irregular'].forEach(function (t) {
+      document.getElementById('howto-tab-' + t).classList.toggle('active', t === name);
+      document.getElementById('howto-tab-' + t).setAttribute('aria-selected', t === name);
+      document.getElementById('howto-panel-' + t).hidden = t !== name;
+    });
+  }
+
+  function showHowtoStep(i) {
+    document.querySelectorAll('.howto-step').forEach(function (b, k) {
+      b.classList.toggle('active', k === i);
+      b.setAttribute('aria-selected', k === i);
+    });
+    var img = HOWTO_STEPS[i].img;
+    document.getElementById('howto-illustration').innerHTML = img ? '<img src="' + img + '" alt="' + HOWTO_STEPS[i].title + '">' : '';
+    document.getElementById('howto-step-title').textContent = HOWTO_STEPS[i].title;
+    document.getElementById('howto-step-desc').textContent = HOWTO_STEPS[i].desc;
+  }
+
+  document.getElementById('howto-steps').innerHTML = HOWTO_STEPS.map(function (st, i) {
+    return '<button class="howto-step" role="tab" aria-label="Passo ' + (i + 1) + ': ' + st.title + '" onclick="showHowtoStep(' + i + ')">' + (st.img ? '<img src="' + st.img + '" alt="">' : ((st.title.match(/^\d+/) || [i + 1])[0])) + '</button>';
+  }).join('');
+  showHowtoStep(0);
+
+  function showMenuView(name) {
+    document.getElementById('menu-view-list').style.display = name === 'list' ? '' : 'none';
+    document.getElementById('menu-view-is').classList.toggle('active', name === 'is');
+    document.getElementById('menu-view-confirm').classList.toggle('active', name === 'confirm');
+    document.getElementById('menu-view-howto').classList.toggle('active', name === 'howto');
+    if (name === 'howto') { showHowtoTab('regular'); showHowtoStep(0); }
+    document.body.classList.toggle('on-menu-is', name === 'is');
+    document.body.classList.toggle('on-menu-list', name === 'list');
+  }
+  function showMenuList() { showMenuView('list'); }
+  function showMenuIs() { showMenuView('is'); }
+  function showMenuConfirm() { showMenuView('confirm'); }
+
+  function toggleMenu(open) {
+    if (open) {
+      showMenuList();
+      // Na tela da porta ainda não há IS's no caminhão para consultar
+      document.getElementById('menu-item-is').hidden = current === 'scan';
+      // Só na tela de contagem de caixas
+      document.getElementById('menu-item-howto').hidden = current !== 'boxes';
+      // Só na tela de HU (ainda sem ação)
+      document.getElementById('menu-item-finish').hidden = current !== 'scan-pallet';
+    }
+    if (!open) document.body.classList.remove('on-menu-is', 'on-menu-list');
+    document.body.classList.toggle('menu-open', open);
+    document.getElementById('menu-dimmer').classList.toggle('open', open);
+    document.getElementById('menu-sheet').classList.toggle('open', open);
+  }
+
+  function showSpecTab(name) {
+    document.getElementById('product-card').dataset.tab = name;
+    ['geral', 'detalhes'].forEach(function (t) {
+      document.getElementById('spec-tab-' + t).classList.toggle('active', t === name);
+      document.getElementById('spec-panel-' + t).classList.toggle('active', t === name);
+    });
+  }
+
+  // ── Quantas camadas completas? ──────────────────────────────────
+  // Cada visão tem a sua própria contagem: a flat abre vazia depois da isométrica
+  var layersByView = { iso: { cam: 0, per: 0, avu: 0, sel: 'cam' }, flat: { cam: 0, per: 0, avu: 0, sel: 'cam' }, livre: { cam: 0, per: 0, avu: 0, sel: 'cam' } };
+  var layers = layersByView.iso;
+
+  function layersSelect(k) {
+    if (k !== 'cam' && layers.cam === 0) return;
+    layers.sel = k; layersRender();
+  }
+  function layersStep(d) {
+    layers[layers.sel] = Math.max(0, Math.min(999, layers[layers.sel] + d));
+    layersRender();
+  }
+  // Modo livre: o valor vem do teclado numérico (máx. 100); só dígitos
+  function layersType(el) {
+    el.value = el.value.replace(/\D/g, '');
+    layers[layers.sel] = Math.min(100, el.value === '' ? 0 : parseInt(el.value, 10));
+    layersRender();
+  }
+  function layersCommit(el) {
+    el.value = layers[layers.sel];
+    layersRender();
+  }
+  function keypadPress(k) {
+    var inp = document.getElementById('iso-input');
+    var cur = String(layers[layers.sel]); // lê a contagem da aba ativa, não o campo (que pode estar desatualizado)
+    var v = k === 'back' ? cur.slice(0, -1) : cur === '0' ? k : cur.length < 3 ? cur + k : cur;
+    inp.value = String(Math.min(100, parseInt(v || '0', 10)));
+    layersType(inp);
+  }
+  function keypadClose() {
+    var inp = document.getElementById('iso-input');
+    document.body.classList.remove('keypad-open');
+    inp.blur();
+    layersCommit(inp);
+  }
+  function renderFlat() {
+    layersDeps();
+    document.getElementById('lt-per').disabled = layers.cam === 0;
+    document.getElementById('lt-avu').disabled = layers.cam === 0;
+    ['cam', 'per', 'avu'].forEach(function (k) {
+      document.getElementById('lv-' + k).textContent = layers[k];
+      document.getElementById('lt-' + k).classList.toggle('active', layers.sel === k);
+    });
+    document.getElementById('layers-field').textContent = layers[layers.sel];
+    document.getElementById('layers-minus').disabled = layers[layers.sel] === 0;
+    var total = layers.cam * layers.per + layers.avu;
+    document.getElementById('layers-total').textContent = total + (total === 1 ? ' caixa' : ' caixas');
+
+    var stack = document.getElementById('pallet-stack');
+    var perRow = Math.min(layers.per || 1, 60);
+    var looseRows = layers.avu > 0 ? 1 : 0;
+    var rows = layers.cam + looseRows;
+    var avail = stack.parentNode.clientHeight - 36 - 20;
+    var lh = Math.max(4, Math.min(40, Math.floor((avail - rows * 4) / Math.max(rows, 1))));
+    stack.style.setProperty('--lh', lh + 'px');
+    var looseN = Math.max(perRow, Math.min(layers.avu, 999));
+    var dense = looseN > 40;
+    var lgap = dense ? 2 : 4;
+    stack.style.setProperty('--loose-gap', lgap + 'px');
+    stack.style.setProperty('--loose-bw', Math.max(0.5, (stack.clientWidth - lgap * (looseN - 1)) / looseN) + 'px');
+    stack.style.setProperty('--bw', ((stack.clientWidth - 4 * (perRow - 1)) / perRow) + 'px');
+    var cells = function (n) { return new Array(Math.min(n, 60) + 1).join('<i></i>'); };
+    var html = '<div class="pallet-base"><b class="pallet-deck"></b><div class="pallet-feet"><i></i><i></i><i></i></div></div>';
+    for (var i = 0; i < layers.cam; i++) html += '<div class="pallet-layer' + (layers.per ? '' : ' ghost') + '">' + cells(layers.per || 1) + '</div>';
+    if (layers.avu > 0) html += '<div class="pallet-loose' + (dense ? ' dense' : '') + '">' + new Array(Math.min(layers.avu, 999) + 1).join('<i></i>') + '</div>';
+    stack.innerHTML = html;
+  }
+  // ── Isometria ───────────────────────────────────────────────────
+  var U = 34, KX = U * 0.866, KY = U * 0.5, BH = 26;   // unidade do plano, projeção e altura da caixa
+  var C = { top: '#ecc489', left: '#d9a566', right: '#c18f4f', line: '#b9854a' };
+  var PW = 4, PD = 3, CX = (PW - PD) * KX / 2;          // palet de tamanho fixo, centralizado em X = 0
+  function P(x, y, z) { return [((x - y) * KX - CX).toFixed(1), ((x + y) * KY - z).toFixed(1)]; }
+  function poly(pts, fill, extra) {
+    return '<polygon points="' + pts.map(function (p) { return p.join(','); }).join(' ') + '" fill="' + fill + '" ' + (extra || 'stroke="' + C.line + '" stroke-width="1" stroke-linejoin="round"') + '/>';
+  }
+  // Paralelepípedo com as três faces visíveis (topo, face esquerda = y máx, face direita = x máx)
+  function cuboid(x0, y0, z0, dx, dy, dz, cols, extra) {
+    var x1 = x0 + dx, y1 = y0 + dy, z1 = z0 + dz;
+    return poly([P(x0, y1, z0), P(x1, y1, z0), P(x1, y1, z1), P(x0, y1, z1)], cols.left, extra) +
+           poly([P(x1, y0, z0), P(x1, y1, z0), P(x1, y1, z1), P(x1, y0, z1)], cols.right, extra) +
+           poly([P(x0, y0, z1), P(x1, y0, z1), P(x1, y1, z1), P(x0, y1, z1)], cols.top, extra);
+  }
+  function gridDims(per) {
+    if (!per) return { w: 3, d: 2 };
+    var w = Math.ceil(Math.sqrt(per * 1.25));
+    return { w: w, d: Math.ceil(per / w) };
+  }
+
+  // Hierarquia da contagem: caixas por camada dependem de camadas; avulsas dependem de caixas por camada.
+  // Se o pai volta a zero, o que estava abaixo é zerado, para não reaparecer com valor antigo.
+  function layersDeps() {
+    if (layers.cam === 0) { layers.per = 0; layers.avu = 0; layers.sel = 'cam'; }
+    if (layers.per === 0) { layers.avu = 0; if (layers.sel === 'avu') layers.sel = 'per'; }
+  }
+
+  function renderIso() {
+    layersDeps();
+    document.getElementById('iso-tab-per').disabled = layers.cam === 0;
+    document.getElementById('iso-tab-avu').disabled = layers.cam === 0 || layers.per === 0;
+    ['cam', 'per', 'avu'].forEach(function (k) {
+      document.getElementById('iso-tab-' + k).classList.toggle('active', layers.sel === k);
+    });
+    document.getElementById('iso-field').textContent = layers[layers.sel];
+    var inp = document.getElementById('iso-input');
+    if (document.activeElement !== inp) inp.value = layers[layers.sel];
+    document.getElementById('iso-minus').disabled = layers[layers.sel] === 0;
+    var total = layers.cam * layers.per + layers.avu;
+    document.getElementById('iso-total').textContent = total + (total === 1 ? ' caixa' : ' caixas');
+    var fin = document.getElementById('iso-finish');
+    fin.disabled = false;
+    if (layersView === 'livre') updateLivreSteps();
+
+    // Palet com tamanho fixo; as caixas se dividem dentro da mesma área
+    var g = gridDims(layers.per), w = g.w, d = g.d, per = layers.per;
+    var cw = PW / w, cd = PD / d;
+    var out = '';
+    var DECK = 8, FEET = 10;
+    [0, (PW - 0.5) / 2, PW - 0.5].forEach(function (fx) {
+      out += cuboid(fx, 0.05, 0, 0.5, PD - 0.1, FEET, { top: '#b98a4d', left: '#a97b3f', right: '#8f6830' });
+    });
+    out += cuboid(0, 0, FEET, PW, PD, DECK, { top: '#d6a96a', left: '#c89a5b', right: '#b0834a' });
+    var z0 = FEET + DECK;
+    // só a altura das camadas se ajusta quando a pilha cresce; o palet (base) nunca muda
+    // avulsas só existem com camadas e caixas por camada informadas
+    var nl = per ? Math.min(layers.avu, 400) : 0, looseLevels = nl > 0 ? Math.ceil(nl / per) : 0;
+    var rows = layers.cam + looseLevels;
+    var bh = Math.max(4, Math.min(BH, 231 / Math.max(rows, 1)));
+    // posições ocupadas por camada: preenche os cantos primeiro, as que sobram ficam no meio
+    var slots = [], mx = (w - 1) / 2, my = (d - 1) / 2;
+    for (var i = 0; i < w * d; i++) slots.push({ x: i % w, y: Math.floor(i / w) });
+    var fromCenter = function (c) { return Math.abs(c.x - mx) + Math.abs(c.y - my); };
+    slots.sort(function (a, b) { return fromCenter(b) - fromCenter(a); });
+    slots = slots.slice(0, per);
+    for (var L = 0; L < layers.cam; L++) {
+      var z = z0 + L * bh;
+      if (per) {
+        slots.slice().sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); })
+          .forEach(function (c) { out += cuboid(c.x * cw + cw * 0.04, c.y * cd + cd * 0.04, z, cw * 0.92, cd * 0.92, bh * 0.92, C); });
+      }
+      // marcação: contorno tracejado da camada, mantido mesmo quando as caixas já foram aplicadas
+      out += cuboid(0, 0, z, PW, PD, bh, { top: 'none', left: 'none', right: 'none' },
+        'stroke="#8a8aab" stroke-width="1.5" stroke-dasharray="5 4" stroke-linejoin="round"');
+    }
+    // avulsas: sempre apoiadas sobre a posição de uma caixa de baixo (nunca flutuam), com tom diferente.
+    // Cada nível repete as mesmas posições das camadas; ao passar de uma camada, empilham na mesma coluna.
+    if (nl > 0) {
+      var zt = z0 + layers.cam * bh, AV = { top: '#cfd9ee', left: '#b3c1de', right: '#97a7c9' };
+      var AV_LINE = 'stroke="#7d8fb8" stroke-width="1" stroke-linejoin="round"';
+      var avItems = [];
+      for (var j = 0; j < nl; j++) {
+        var c = slots[j % per];
+        avItems.push({ x: c.x * cw, y: c.y * cd, z: zt + Math.floor(j / per) * bh });
+      }
+      avItems.sort(function (a, b) { return (a.z - b.z) || ((a.x + a.y) - (b.x + b.y)); });
+      avItems.forEach(function (it) { out += cuboid(it.x + cw * 0.04, it.y + cd * 0.04, it.z, cw * 0.92, cd * 0.92, bh * 0.92, AV, AV_LINE); });
+    }
+    var svg = document.getElementById('iso-svg');
+    svg.setAttribute('viewBox', '-150 -265 300 400');   // enquadramento fixo: o palet não muda de tamanho nem de lugar
+    svg.innerHTML = '<g>' + out + '</g>';
+  }
+  function layersRender() { if (layersView === 'flat') renderFlat(); else renderIso(); }
+
+  // Visão principal: isométrica
+  var layersView = 'iso';
+  function setLayersView(view) {
+    layersView = view;
+    layers = layersByView[view];
+    document.getElementById('view-iso').hidden = view === 'flat';
+    document.getElementById('view-flat').hidden = view !== 'flat';
+    document.body.classList.toggle('modo-livre', view === 'livre');
+    if (view !== 'livre') document.body.classList.remove('keypad-open');
+    layersRender(); // redesenha com a contagem da visão ativa; a flat mede o palco ao aparecer
+  }
+  window.addEventListener('resize', layersRender);
+
+  var screens = ['usecase', 'usecase-info', 'home', 'scan', 'action', 'scan-pallet', 'scan-mu', 'scan-produto', 'produto-detalhe', 'camadas', 'transit'];
+  var current = 'usecase';
+
+  var scanPalletVisits = 0;
+  function go(name) {
+    current = name;
+    document.body.classList.toggle('on-action', name === 'action');
+    document.body.classList.toggle('on-door', name === 'scan');
+    document.body.classList.toggle('on-hu', name === 'scan-pallet');
+    if (name === 'scan-pallet') scanPalletVisits++;
+    document.body.classList.toggle('on-hu-finish', name === 'scan-pallet' && scanPalletVisits === 2);
+    document.body.classList.toggle('on-camadas', name === 'camadas');
+    document.body.classList.toggle('on-produto-detalhe', name === 'produto-detalhe');
+    toggleMenu(false);
+    toggleAttention(false);
+    showSpecTab('geral');
+    document.querySelectorAll('[data-screen]').forEach(function (el) {
+      el.hidden = el.dataset.screen !== name;
+    });
+    if (name === 'camadas') { Object.keys(layersByView).forEach(function (k) { var v = layersByView[k]; v.cam = 0; v.per = 0; v.avu = 0; v.sel = 'cam'; }); setLayersView('iso'); }
+  }
+
+  // Snackbar do DS: confirma a ação e some sozinho em 3s
+  var snackTimer;
+  function showSnackbar(message, withIcon) {
+    var sb = document.getElementById('snackbar'), bar = document.getElementById('snackbar-bar');
+    document.getElementById('snackbar-message').textContent = message;
+    document.getElementById('snackbar-icon').style.display = withIcon ? '' : 'none';
+    bar.classList.remove('depleting');
+    void bar.offsetWidth; // reinicia a animação da barra
+    bar.classList.add('depleting');
+    sb.classList.add('visible');
+    clearTimeout(snackTimer);
+    snackTimer = setTimeout(function () { sb.classList.remove('visible'); }, 3000);
+  }
+
+  // Seta → na tela de transporte: vai para a próxima tarefa e confirma com o snackbar
+  function transitNext() {
+    go('scan-pallet');
+    showSnackbar('Você acabou de processar um pallet');
+  }
+
+  // Drawer de finalização: confirma o descarregamento antes de ir para a impressora
+  function toggleFinish(open) {
+    document.getElementById('finish-dimmer').classList.toggle('open', open);
+    document.getElementById('finish-sheet').classList.toggle('open', open);
+  }
+
+  // Fim da impressão: vai para a tela do comprovante com o snackbar (chamada pelo tempo ou pela seta)
+  function printingDone() {
+    if (current !== 'imprimindo') return;
+    go('action-comprovante');
+    showSnackbar('Impressão finalizada', true);
+  }
+
+  // Avança (1) ou volta (-1) uma tela; usado pelas setas e pelo toque na tela. Retorna se navegou
+  function navigate(step) {
+    if (current === 'transit' && step === 1) { transitNext(); return true; }
+    // Avançar na tela da impressora: mostra o carregamento; termina sozinho em 3s ou ao avançar de novo
+    if (current === 'scan-impressora' && step === 1) {
+      go('imprimindo');
+      setTimeout(printingDone, 3000);
+      return true;
+    }
+    if (current === 'imprimindo' && step === 1) {
+      printingDone();
+      return true;
+    }
+    if (screens.indexOf(current) < 0) return false; // telas fora da sequência não navegam
+    var next = screens[screens.indexOf(current) + step];
+    if (next) { go(next); return true; }
+    return false;
+  }
+
+  // Setas esquerda/direita voltam e avançam uma tela
+  document.addEventListener('keydown', function (e) {
+    if (e.target.tagName === 'INPUT') return;
+    var step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+    if (step && navigate(step)) e.preventDefault();
+  });
+
+  // Toque na tela (celular): na área livre avança; na borda esquerda (20%) volta.
+  // Elementos interativos, menus abertos e a tela de contagem mantêm o próprio comportamento.
+  var TAP_NAV_EXEMPT = ['camadas'];
+  document.querySelector('.preview-wrap').addEventListener('click', function (e) {
+    if (e.target.closest('button, a, input, label, [onclick], [role="button"], .iso-keypad')) return;
+    if (document.querySelector('.menu-dimmer.open, .menu-sheet.open')) return;
+    if (TAP_NAV_EXEMPT.indexOf(current) >= 0) return;
+    var rect = this.getBoundingClientRect();
+    navigate((e.clientX - rect.left) < rect.width * 0.2 ? -1 : 1);
+  });
+
+  // Barra de espaço simula a leitura do código na tela de scan / lista
+  var onSpace = { scan: 'action', 'scan-pallet': 'scan-mu', 'scan-mu': 'scan-produto', 'scan-produto': 'produto-detalhe', 'produto-detalhe': 'camadas' };
+  document.addEventListener('keydown', function (e) {
+    if (e.code === 'Space' && onSpace[current]) {
+      e.preventDefault();
+      go(onSpace[current]);
+    }
+  });
+
+  // Link de camadas-isometrico.html abre direto na tela Conte as caixas
+  if (location.hash === '#camadas') go('camadas');
+</script>
+</body>
+</html>
