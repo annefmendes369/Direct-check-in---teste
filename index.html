@@ -10,6 +10,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./tetris-ds-mobile.css">
 <style>
+  /* Sem zoom por duplo toque (o iOS ignora user-scalable=no): o stepper da contagem precisa de toques rápidos */
+  html, body, * { touch-action: manipulation; }
   html, body {
     width: 100%; height: 100%;
     background: #f5f7ff;
