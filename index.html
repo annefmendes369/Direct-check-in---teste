@@ -710,7 +710,7 @@
       <span class="iso-total-label">Total do pallet</span>
       <span class="iso-total-value" id="iso-total">0 caixas</span>
     </div>
-    <button class="btn btn--primary" id="iso-finish" onclick="layersConfirm()">Confirmar</button>
+    <button class="btn btn--primary" id="iso-finish" onclick="layersConfirm()" disabled>Confirmar</button>
   </div>
 
   <div class="iso-keypad" aria-label="Teclado numérico">
@@ -1194,7 +1194,7 @@
     var total = layers.cam * layers.per + layers.avu;
     document.getElementById('iso-total').textContent = total + (total === 1 ? ' caixa' : ' caixas');
     var fin = document.getElementById('iso-finish');
-    fin.disabled = false;
+    fin.disabled = total === 0; // só confirma com alguma caixa contada
     if (layersView === 'livre') updateLivreSteps();
 
     // Palet com tamanho fixo; as caixas se dividem dentro da mesma área
