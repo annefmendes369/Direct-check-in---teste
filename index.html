@@ -241,7 +241,7 @@
   @media (max-height: 800px) { .layers-illus { margin-top: 8px; padding: 16px 16px 20px; } .layers-tabs, .layers-stepper { padding-top: 16px; } .layers-footer { margin-top: 16px; padding-top: 16px; } }
   @media (max-height: 760px) { .layers-step-btn, .layers-field { height: 52px; } .layers-footer { padding-bottom: 16px; } .layers-tabs .product-tab { min-height: 48px; } }
   /* ── Visão isométrica (estilos próprios, prefixo iso-) ── */
-  .iso-illus { flex: 1; min-height: 0; max-height: 360px; margin: 16px 24px 8px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; background: transparent; border: 1px solid #dedfed; border-radius: 16px; padding: 24px 20px 28px; }
+  .iso-illus { flex: 1; min-height: 0; margin: 16px 24px 32px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; background: transparent; border: 1px solid #dedfed; border-radius: 16px; padding: 24px 20px 28px; }
   .iso-tabs { padding: 8px 24px 0; }
   .iso-tabs .product-tabs { position: relative; display: flex; flex-wrap: wrap; justify-content: space-between; column-gap: 8px; row-gap: 8px; background: none; border-radius: 0; padding: 0; }
   .iso-tabs .product-tabs::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: #dedfed; }
@@ -250,7 +250,7 @@
   .iso-tabs .product-tab.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: #4850e5; }
   .iso-tabs .product-tab:disabled { opacity: .4; cursor: not-allowed; }
   .iso-tab-label { font-size: inherit; line-height: inherit; font-weight: inherit; }
-  .iso-stepper { display: flex; align-items: center; gap: 12px; padding: 40px 24px 0; }
+  .iso-stepper { display: flex; align-items: center; gap: 12px; padding: 40px 24px; }
   .iso-step-btn { flex: 0 0 64px; height: 64px; padding: 0; display: flex; align-items: center; justify-content: center; border: none; border-radius: 16px; cursor: pointer; }
   .iso-step-btn svg { display: block; }
   .iso-step-btn.minus { background: #e0e9ff; color: #4850e5; }
@@ -278,13 +278,13 @@
   body.modo-livre .iso-input-row { display: block; }
   .iso-input { width: 100%; height: 64px; border: none; border-bottom: 2px solid #4850e5; border-radius: 0; background: transparent; text-align: center; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 36px; font-weight: 600; color: #1c1c2b; outline: none; }
   .iso-input::placeholder { color: #9ca0bf; }
-  .iso-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 24px 32px; margin-top: auto; border-top: 1px solid #dedfed; }
+  .iso-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 24px 32px; margin-top: 0; border-top: 1px solid #dedfed; }
   .iso-total { display: flex; flex-direction: column; }
   .iso-total-label { font-size: 12px; line-height: 16px; color: #5a5a7c; }
   .iso-total-value { font-size: 28px; font-weight: 600; line-height: 34px; color: #1c1c2b; }
   .iso-footer .btn:disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
   .iso-footer .btn { width: auto; flex: 0 0 auto; padding: 0 32px; height: 64px; }
-  @media (max-height: 800px) { .iso-illus { margin-top: 8px; margin-bottom: 8px; padding: 16px 16px 20px; } .iso-tabs { padding-top: 8px; } .iso-stepper { padding-top: 24px; } .iso-footer { margin-top: auto; padding-top: 16px; } }
+  @media (max-height: 800px) { .iso-illus { margin-top: 8px; margin-bottom: 32px; padding: 16px 16px 20px; } .iso-tabs { padding-top: 8px; } .iso-stepper { padding: 32px 24px; } .iso-footer { margin-top: 0; padding-top: 16px; } }
   @media (max-height: 760px) { .iso-step-btn, .iso-field { height: 52px; } .iso-footer { padding-bottom: 16px; } }
   .layers-view { display: flex; flex-direction: column; flex: 1; min-height: 0; }
   .layers-view[hidden] { display: none; }
